@@ -1,26 +1,37 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 
-import { catchError, Observable, tap, throwError } from 'rxjs';
+import { catchError, combineLatest, Observable, tap, throwError, map } from 'rxjs';
 
 import { Product } from './product';
+import { ProductCategoryService } from '../product-categories/product-category.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductService {
   private productsUrl = 'api/products';
-  private suppliersUrl = 'api/suppliers';
-  
-  constructor(private http: HttpClient) { }
+  //rivate suppliersUrl = 'api/suppliers';
 
-  getProducts(): Observable<Product[]> {
-    return this.http.get<Product[]>(this.productsUrl)
-      .pipe(
-        tap(data => console.log('Products: ', JSON.stringify(data))),
-        catchError(this.handleError)
-      );
-  }
+  products$ = this.http.get<Product[]>(this.productsUrl)
+  .pipe(
+    tap(data => console.log('Products: ', JSON.stringify(data))),
+    catchError(this.handleError)
+  );
+  
+  categories$ = this.productCategoryService.categories$;
+
+  productsWithCategories$ = combineLatest([this.products$, this.categories$]).pipe(
+    // Observable<[Product[], Category[]]>
+    // ([products, categories]) destructuring -> products = Product[], categories = Category[]
+    map(([products, categories]) => // map [Product[], Category[]] -> Product[]
+      products.map(
+        p => ({...p, price: p.price * 1.5, category: categories.find(c => c.id === p.categoryId)?.name} as Product)
+      )
+    )
+  );
+
+  constructor(private http: HttpClient, private productCategoryService: ProductCategoryService) { }
 
   private fakeProduct(): Product {
     return {
@@ -47,7 +58,7 @@ export class ProductService {
       // The response body may contain clues as to what went wrong,
       errorMessage = `Backend returned code ${err.status}: ${err.message}`;
     }
-    console.error(err);
+    console.error('Error=' + err);
     return throwError(() => errorMessage);
   }
 

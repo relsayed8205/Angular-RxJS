@@ -4,8 +4,9 @@ export interface Product {
   productName: string;
   productCode?: string;
   description?: string;
-  price?: number;
+  price: number;
   categoryId?: number;
+  category?: String;
   quantityInStock?: number;
   searchKey?: string[];
   supplierIds?: number[];
